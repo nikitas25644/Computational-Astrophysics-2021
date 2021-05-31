@@ -1,2 +1,2 @@
 ASTRO CA project
-#Computational Astrophysics 2021
+Computational Astrophysics 2021
