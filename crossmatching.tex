@@ -1,0 +1,160 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+\title{Cross-Matching}
+\date{June 16 2021}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+An integral part of astronomy is compiling data from various observatories and telescopes across the globe.
+Some of this data is:
+        \begin{itemize}
+            \item RA:        Right Ascension 
+            \item DEC:       Declination
+            \item Magnitude: Apparent Brightness of the star
+            \item Surface Temperature
+            \item Spectral Class
+            \item ...and a lot more!
+        \end{itemize}
+These observatories collect data at different wavelengths,location and times.
+This causes difference in data for the same astronomical object leading to variations across catalogs which could be prone to errors.
+To resolve this we apply cross-matching or cross-referencing.
+
+\section{Method of Cross-Matching}
+In this section we will look into one of the methods of cross matching ,that is , matching over sky-to-sky distance.
+The basic idea is to compare the distance between two objects say star 'A' and 'B' with an error (or a minimum acceptable distance) and repeat over the entire catalogs.
+    \subsection{2D Space}
+    Consider arrays:
+        \begin{itemize}
+            \item X1: x co-ods of points from data set D1
+            \item Y1: y co-ods of points from data set D1
+            \item X2: x co-ods of points from data set D2
+            \item Y2: y co-ods of points from data set D2
+        \end{itemize}
+    The distance d between two general elements from these data-sets is
+                    \[d=\sqrt[2]{((X1[i]-X2[j])^2+(Y1[i]-Y2[j])^2)}\]
+    The iterations will be then run over i\(\rightarrow\)len(D1) and j\(\rightarrow\)len(D2),and the condition, \[d<\epsilon\] where \(\epsilon\) represents the error acceptable.
+    
+    
+    This represents the basic idea of distance based cross referencing but with a slight change.
+    \subsection{Haversine Formula}
+    The universe is not simply a  plane surface ,which implies that the standard distance formula is not really applicable here.
+    Instead we employ the Haversine Formula,which looks like this:
+    \[d=2r\arcsin(\sqrt{hav(\varphi_2-\varphi_1)+\cos(\varphi_2)\cos(\varphi_1)hav(\lambda_2-\lambda_1)}\]
+    where,
+            \begin{itemize}
+                \item \(\varphi_i\) is the latitude of point i in rad
+                \item \(\lambda_i\) is the longitude of point i in rad
+                \item \(hav(\theta)=\sin^2{(\theta/2)}\)
+                \end{itemize}
+    This indeed looks quite messy and once combined within the framework of two for loops and  comparison with  error \(\epsilon\) is not a viable option for frequent use in terms of easy coding as well as time complexity.
+    Here AstroPy comes to our rescue.
+    \begin{figure}[htp]
+        \centering
+        \includegraphics[width=4cm]{assets/Haverpic.png}
+        \caption{The distance between P and Q is not a simple straight line but rather an arc,hence the need of the Haversine Formula}
+        \label{fig:Haverdist}
+    \end{figure}
+\section{AstroPy to the rescue}
+To easily compare distances and find common objects in catalogs, AstroPy library gives us the following function
+                \begin{verbatim}
+                (c1).match_to_catalog_sky(c2)
+                \end{verbatim}
+Here c1 and c2 are just the set of coordinate arrays for each of the catalogs under observation,they are in the form of RA and DEC in degrees.
+Here are some code snippets of the application of cross-matching using AstroPy.
+\medskip
+\hrule
+\begin{lstlisting}
+import numpy as np
+import pandas as pd
+from astropy import units as u
+from astropy.coordinates import SkyCoord
+\end{lstlisting}
+\hrule
+\medskip
+\begin{enumerate}
+\color{red}
+\item Include the proper libraries.
+\item The SkyCoord function deals with converting the arrays of RA and DEC data from the dataframes to proper coordinates under the required framework.
+We will encounter them ahead.
+\end{enumerate}
+\medskip
+\hrule
+\medskip
+\begin{lstlisting}
+df1=pd.read_csv("Catalog1.csv")
+df2=pd.read_csv("Catalog2.csv")
+
+ra1 = np.asarray(df1['ra'])
+dec1 = np.asarray(df1['dec'])
+ra2 = np.asarray(df2['ra'])
+dec2 = np.asarray(df2['dec'])
+\end{lstlisting}
+\medskip
+\hrule
+\medskip
+\begin{enumerate}
+    \color{red}
+    \item The first 2 lines initiate the respective dataframes with previous catalog data.
+    \item The next line initialize the arrays with RA and DEC data for the two respective catalogs.
+\end{enumerate}
+\medskip
+\hrule
+\medskip
+\begin{lstlisting}
+c1 = SkyCoord(ra=ra1*u.degree, dec=dec1*u.degree, frame='icrs')
+c2 = SkyCoord(ra=ra2*u.degree, dec=dec2*u.degree, frame='icrs')
+
+idx,d2d,d3d= (c1).match_to_catalog_sky(c2)
+\end{lstlisting}
+\medskip
+\hrule
+\medskip
+\begin{enumerate}
+    \color{red}
+    \item The first two line employ the SkyCoord function to initialize the c1 and c2 arrays as coordinates of stars in space ,here under the 'icrs' framework and degree units.
+    \item The 'u' invokes the units package from the AstroPy library (one less hassle for us!)
+    \item The third line is the simplification for the programmer.
+        \begin{itemize}
+            \item idx : integer array : The index of the nearest source in catalog 2 for each source in catalog 1.
+            \item d2d : angle : The on-sky(angular)(arcsec) for each element in the two catalogs
+            \item d3d : Quantity : The 3D separation between each element  
+        \end{itemize}
+\end{enumerate}
+\medskip
+\hrule
+\medskip
+\begin{lstlisting}
+matches=[]
+e         
+for id1, (closest_id2, dist) in enumerate(zip(idx, d2d)):
+    closest_dist = dist.value
+      
+    if closest_dist < e: 
+    matches.append([id1, closest_id2, closest_dist])
+\end{lstlisting}
+\medskip
+\hrule
+\medskip
+\begin{enumerate}
+    \color{red}
+    \item The matches array holds data of the the elements that satify the matching error.
+    \item e or \(\epsilon\) refwrs to the max on sky seperation we are willing to tolerate , mostly in \((arcsec/3600)\) degrees.
+    \item The next for loop runs over each idx from the previous snippet and initializes the minimum distance for each element.
+    \item The if deals with the comparison with our \(\epsilon\) and initializes matches array with the appropriate values.
+    \item Here id1 denotes index of the star in catalog 1 , for which the star under index (closest id2)from catalog 2,satisfy the if condition and also stores the minimum 3D distance between them.
+    \item enumerate(zip(a,b)) is simply a tool to run iteration over every idx and use values for the respective d2d
+\end{enumerate}
+Hence we obtain an array storing the best matches from both the catalogs,along with their 3D separations 
+\section{Why AstroPy}
+A question does arise,challenging the requirement of the astropy module for cross-matching.
+But experiments on large data catalogs (in the order of tens of thousands) of data point show an exceptionally(and exponentially varying) large amount of time for an algorithm employing the standard 'divide and conquer' strategy.
+Whereas using AstroPy showed much lesser and quite acceptble times for the same data sets.
+\section{Example}
+Q1 of this document discusses the use of AstroPy libraries to match two globular star-clusters with the famous Messier 110 catalog.
+\end{document}
