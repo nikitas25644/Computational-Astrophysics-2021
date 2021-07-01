@@ -1,0 +1,129 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[swedish]{babel}
+\usepackage{amssymb}
+\usepackage{cite}
+\usepackage{color}
+\usepackage{hyperref}
+\usepackage{sectsty}
+\usepackage[thinc]{esdiff}
+\usepackage{listings}
+\usepackage{graphicx}
+\usepackage{wrapfig}
+\usepackage{caption}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=orchid,
+    filecolor=magenta,      
+    urlcolor=cyan,
+    pdftitle={Overleaf Example},
+    pdfpagemode=FullScreen,
+    }
+
+% Margins
+\topmargin=-0.45in
+\evensidemargin=0in
+\oddsidemargin=0in
+\textwidth=6.5in
+\textheight=9.0in
+\headsep=0.25in
+
+\title{Curve Fitting}
+\author{B.Anshuman}
+\date{June 17, 2021}
+\begin{document}
+\maketitle
+% \begin{abstract}
+%     Things to be covered in this topic:
+%     \begin{itemize}
+%         \item What is curve fitting.
+%         \item Curve fitting algorithms.
+%         % \item Need of curve fitting in astronomy.
+%         \item Scipy's implementation of curve\_fit()
+%         % \item Curve fitting Examples
+%     \end{itemize}
+% \end{abstract}
+\section*{What is Curve Fitting}
+Curve fitting, as the term suggests, finding a mathematical function that best describes a set of data points, usually observed. As observation is prone to some errors, curve fitting is usually not so easy, because of \textit{noise} in the data points. Practically, Curve-fitting is just an optimisation problem, of finding the best representative to a collection of observations.
+\begin{center}
+    \centering
+    \includegraphics[width=.7\textwidth]{assets/curve-fitting.png}
+    \captionof{figure}{Possible set of Observations}
+\end{center}
+For furthur discussion, let's be limited to two dimensions, which is easier to visualise. The x-axis is the independent variable or the input to the function. The y-axis is the dependent variable or the output of the function. We don’t know the form of the function that maps examples of inputs to outputs, but we suspect that we can approximate the function with a standard function form.\\
+Curve fitting involves first defining the functional form of the mapping function (also called the basis function), then searching for the parameters to the function that result in the minimum error.\\
+Error is calculated by using the observations from the domain and passing the inputs to our candidate mapping function and calculating the output, then comparing the calculated output to the observed output.
+
+\section*{Curve Fitting Algorithms}
+Scipy itself uses non-linear squares method, but let's start from a bit basic.\\
+The key to curve fitting is to form a mapping function at start.\\
+Let's consider a linear mapping function. $$y = mx + c$$
+The coefficients are parameters that are to be adjusted to find the best fit, using an optimisation algorithm, which is called linear regression.
+So far, linear equations of this type can be fit by minimizing least squares
+that is, finding a cost function like:
+$$J = \frac{\sum_{1}^{n} {(y - y_{original})^2}}{n}$$
+and reducing this cost function through \href{https://machinelearningmastery.com/gradient-descent-for-machine-learning/}{gradient descent} like:
+\[
+\delta = \nabla J
+\]
+$$
+\delta_m = \diffp{J}{m} = \frac{\sum_{i=1}^n {x_i(y_i-y_{original, i})}}{n}
+$$
+$$
+\delta_c = \diffp{J}{c} = \frac{\sum_{i=1}^n{(y_i-y_{original,i})}}{n}
+$$
+and can be calculated analytically. This means we can find the optimal values of the parameters using a little linear algebra.
+$$
+m_{new} = m - \alpha\cdot\delta_m
+$$
+$$
+c_{new} = c - \alpha\cdot\delta_c
+$$
+Where $\alpha$ is the length of jump along the gradient vector, and that \href{https://www.mygreatlearning.com/blog/understanding-learning-rate-in-machine-learning/}{matters}.\par
+The equation does not have to be a straight line.\\
+We can add curves in the mapping function by adding exponents. For example, we can add a squared version of the input weighted by another parameter:
+$$y = a_1x^2 + a_2x + a_3$$
+Similar reasoning as above would work in such cases, even after introducing non-linear terms. 
+
+\section*{Scipy's implementation of Curve Fitting}
+Now moving on to how Scipy implements Curve fitting through its `curve\_fit()` function, The function takes the same input and output data as arguments, as well as the name of the mapping function to use (using linear model in following code example):
+
+\vspace{0.4cm}
+% \hrule
+\begin{lstlisting}[language=Python]
+from scipy.optimize import curve_fit
+import matplotlib.pyplot as plt
+def f(x, m, c):
+    return m*x+c
+
+xdata = np.linspace(0, 5, 500)
+ydata = f(xdata, 2, 1) + 0.25*np.random.randn(len(xdata))
+
+\end{lstlisting}
+% \begin{center}
+% \centering
+% \includegraphics[width=0.4\textwidth]{assets/curvefitting_linear.png}
+% \captionof{figure}{This is the plot with 'created' observations.}
+% \end{center}
+
+\begin{lstlisting}
+p_opt, p_cov = curve_fit(f, xdata, ydata)
+print(p_opt)
+# Output is [2.01640064 0.95691782]
+\end{lstlisting}
+
+% \hrule
+\vspace{0.4cm}
+Clearly, this is quite close to the original value of [2,1]. `p\_cov` is the covariance matrix generated along with optimum parameters.\par
+This idea can, as explained earlier, be easily extended to non-linear curves as well, where our base function is set as powers of x or transcendental function of x, and curve\_fit() would find optimum parameters to fit given observation set to such a function.
+
+\pagebreak
+Another application example we did is following:
+\begin{center}
+    \includegraphics[width=1.0\textwidth]{assets/scipyCurveFit.PNG}
+    \captionof{figure}{Polynomial Curve-fit with Scipy}
+\end{center}
+Curve-fitting (have used this term 14 times already, no more) has been a powerful tool from quite a while, to analyse observations, and hypothesise.
+There are several other techniques of that, and you can check them out right \href{https://wikipedia.org/wiki/Curve_fitting}{here} and \href{https://machinelearningmastery.com/curve-fitting-with-python/}{here.}
+\end{document}
